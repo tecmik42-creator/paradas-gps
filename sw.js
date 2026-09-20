@@ -1,5 +1,5 @@
 /* Service Worker — Paradas GPS (caché offline) */
-const CACHE = "paradas-gps-v3";
+const CACHE = "paradas-gps-v4";
 const ASSETS = [
   "./",
   "./index.html",

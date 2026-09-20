@@ -35,7 +35,8 @@
   const confirmOverlay = $("#confirmOverlay");
   const sheetTipo = $("#sheetTipo");
   const inputComunidad = $("#inputComunidad");
-  const inputEquipo = $("#inputEquipo");
+  const crewToggles = $("#crewToggles");
+  const CREW = ["Haydee", "Adriana", "Virginia", "Joy", "Mikael"];
   const inputImporte = $("#inputImporte");
   const inputNotas = $("#inputNotas");
   const checkAbierto = $("#checkAbierto");
@@ -618,6 +619,50 @@
     manualGps.hidden = false;
   }
 
+
+  // ——— Equipo (crew toggles) ———
+  function getCrewButtons() {
+    return Array.from(crewToggles.querySelectorAll(".crew-btn"));
+  }
+
+  function clearCrewSelection() {
+    getCrewButtons().forEach((btn) => {
+      btn.classList.remove("selected");
+      btn.setAttribute("aria-pressed", "false");
+    });
+  }
+
+  function setCrewSelectionFromEquipo(equipoStr) {
+    clearCrewSelection();
+    if (!equipoStr) return;
+    const parts = String(equipoStr)
+      .split(/\s*\+\s*/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const selected = new Set(parts);
+    getCrewButtons().forEach((btn) => {
+      const name = btn.getAttribute("data-name");
+      if (selected.has(name)) {
+        btn.classList.add("selected");
+        btn.setAttribute("aria-pressed", "true");
+      }
+    });
+  }
+
+  function getSelectedEquipo() {
+    return getCrewButtons()
+      .filter((btn) => btn.getAttribute("aria-pressed") === "true" || btn.classList.contains("selected"))
+      .map((btn) => btn.getAttribute("data-name"))
+      .filter((name) => CREW.includes(name))
+      .join(" + ");
+  }
+
+  function toggleCrewBtn(btn) {
+    const on = !(btn.getAttribute("aria-pressed") === "true");
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.classList.toggle("selected", on);
+  }
+
   // ——— Sheet ———
   function openNewSheet(tipo) {
     sheetMode = "new";
@@ -625,7 +670,7 @@
     pendingTipo = tipo;
     sheetTipo.textContent = tipo;
     inputComunidad.value = "";
-    inputEquipo.value = "";
+    clearCrewSelection();
     inputImporte.value = "";
     inputNotas.value = "";
     checkAbierto.checked = false;
@@ -648,7 +693,7 @@
     pendingTipo = ev.tipo;
     sheetTipo.textContent = ev.tipo;
     inputComunidad.value = ev.comunidad_casa || "";
-    inputEquipo.value = ev.equipo || "";
+    setCrewSelectionFromEquipo(ev.equipo || "");
     inputImporte.value =
       ev.importe_eur != null && Number.isFinite(Number(ev.importe_eur))
         ? String(ev.importe_eur)
@@ -694,7 +739,7 @@
   }
 
   function readExtraFields() {
-    const equipo = inputEquipo.value.trim();
+    const equipo = getSelectedEquipo();
     const importeRaw = inputImporte.value.trim();
     let importe_eur = null;
     if (importeRaw !== "") {
@@ -956,6 +1001,12 @@
   $("#btnExportJson").addEventListener("click", exportJson);
   $("#btnLoadSeed").addEventListener("click", () => loadReferenceDay(false));
   $("#btnClearHistory").addEventListener("click", clearHistory);
+
+  crewToggles.addEventListener("click", (e) => {
+    const btn = e.target.closest(".crew-btn");
+    if (!btn || !crewToggles.contains(btn)) return;
+    toggleCrewBtn(btn);
+  });
 
   btnSaveSheet.addEventListener("click", saveFromSheet);
   btnCancelSheet.addEventListener("click", closeSheet);

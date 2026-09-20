@@ -435,6 +435,59 @@ main {
   opacity: 0.8;
 }
 
+.equipo-field {
+  margin-top: 0.75rem;
+}
+
+.equipo-label {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.crew-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.crew-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.5rem 0.85rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.crew-btn:active {
+  transform: scale(0.97);
+}
+
+.crew-btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.crew-btn[aria-pressed="true"],
+.crew-btn.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0a1f18;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px rgba(61, 255, 154, 0.35);
+}
+
+
 .sheet input[type="text"],
 .sheet input[type="number"],
 .sheet textarea {

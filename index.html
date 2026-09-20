@@ -77,8 +77,16 @@
       <label for="inputComunidad">Comunidad / casa <span class="optional">(opcional)</span></label>
       <input type="text" id="inputComunidad" placeholder="Ej. Urbanización Las Flores · portal 3" autocomplete="off" />
 
-      <label for="inputEquipo">Equipo <span class="optional">(opcional)</span></label>
-      <input type="text" id="inputEquipo" placeholder="Ej. Vicky + Haydee · 3 personas" autocomplete="off" />
+      <div class="equipo-field">
+        <span class="equipo-label" id="equipoLabel">Equipo <span class="optional">(opcional)</span></span>
+        <div class="crew-toggles" role="group" aria-labelledby="equipoLabel" id="crewToggles">
+          <button type="button" class="crew-btn" data-name="Haydee" aria-pressed="false">Haydee</button>
+          <button type="button" class="crew-btn" data-name="Adriana" aria-pressed="false">Adriana</button>
+          <button type="button" class="crew-btn" data-name="Virginia" aria-pressed="false">Virginia</button>
+          <button type="button" class="crew-btn" data-name="Joy" aria-pressed="false">Joy</button>
+          <button type="button" class="crew-btn" data-name="Mikael" aria-pressed="false">Mikael</button>
+        </div>
+      </div>
 
       <label for="inputImporte">Importe (€) <span class="optional">(opcional)</span></label>
       <input type="number" id="inputImporte" step="0.01" min="0" placeholder="Ej. 45.90" inputmode="decimal" />
