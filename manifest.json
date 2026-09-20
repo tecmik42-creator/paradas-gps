@@ -37,6 +37,19 @@
   ],
   "shortcuts": [
     {
+      "name": "Plan del día",
+      "short_name": "Plan",
+      "description": "Configurar paradas y registrar la jornada",
+      "url": "./plan.html",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
       "name": "Registrar parada",
       "short_name": "Paradas",
       "description": "Abrir el registro de eventos",

@@ -11,12 +11,14 @@ Pensada para conductores en España (ropa, alfombras, traslado de personal de li
 | Archivo | Descripción |
 |---------|-------------|
 | `index.html` | Página principal (registro) |
+| `plan.html` | Plan del día (configuración + checklist) |
 | `clientes.html` | Gestión de la base de clientes |
 | `styles.css` | Estilos alto contraste |
 | `app.js` | Lógica del registro |
+| `plan.js` | Lógica del plan del día |
 | `clientes.js` | Lógica de la página Clientes |
 | `manifest.json` | Manifiesto PWA |
-| `sw.js` | Service worker (modo offline) |
+| `sw.js` | Service worker (modo offline, caché `paradas-gps-v9`) |
 | `icons/` | Iconos de instalación |
 
 ## Cómo abrirla en el móvil
@@ -71,6 +73,8 @@ Una vez instalada, funciona a pantalla completa y puede usarse **sin conexión**
 
 ## Cómo usar
 
+Para preparar la mañana y registrar en un toque, abre **Plan del día** (enlace en cabecera).
+
 1. Pulsa uno de los cuatro botones grandes:
    - **Recogida**
    - **Entrega**
@@ -108,6 +112,35 @@ Pestaña **Tipos** en la misma página. Se guardan en `localStorage` bajo `parad
 - Puedes añadir, renombrar y borrar tipos. Al borrar un tipo en uso, la app pide reasignar esos clientes a otro tipo (o cancelar).
 - El registro (`app.js`) y los filtros/autocompletado leen los tipos de la misma clave (chips dinámicos).
 - En clientes y eventos, `tipo` / `cliente_tipo` guardan el **id** estable del tipo (compatible con datos y CSV previos). El `nombre` es lo que se muestra en chips y badges; al renombrar solo cambia la etiqueta.
+
+
+## Plan del día
+
+Página **Plan del día** (`plan.html`, enlace en cabecera de Paradas y Clientes; atajo PWA) para preparar la jornada por toques y registrar paradas en segundos.
+
+### Configurar (lunes por la mañana)
+
+1. **Fecha** (por defecto hoy, Europe/Madrid) y **hora de inicio** (ahora; ±5 min o «Ahora»).
+2. **Equipo**: chips Haydee, Adriana, Virginia, Joy, Mikael (multi-selección).
+3. **Paradas del bloque**: chips rápidos Coroso 1 / 2 / 3 si existen en `paradas-gps-clientes`, más lista buscable. Toque para añadir/quitar.
+4. Panel en vivo: personas, paradas, **tiempo estimado**, **hora fin estimada**.
+5. Ritmo de referencia Techi: *2 personas = 1 h para las 3 comunidades de Coroso* → 20 min/parada a 2 personas.
+   - Fórmula: `duration_min = round(K × 20 × (2 / N))` (N ≥ 1, mínimo 5 min).
+   - Hora fin = inicio + duración; se puede **ajustar a mano**.
+6. **Guardar plan** o **Empezar jornada** → `localStorage` clave `paradas-gps-plan-dia`.
+
+Se pueden **añadir más bloques** (p. ej. Caramicheiros) sin borrar el día.
+
+### Durante el día (registro rápido)
+
+Checklist ordenada por bloque:
+
+- Cada fila: nombre, badge de tipo, resumen de equipo.
+- **Llegada**: marca hora de llegada en el plan.
+- **Hecho** (un toque): crea un evento cerrado (`Traslado personal` por defecto) en el historial de Paradas GPS con GPS (o sin GPS si falla), equipo del bloque y comunidad de la parada.
+- **Registrar…**: hoja mínima para elegir Traslado personal / Tarea hecha y confirmar GPS.
+
+Los eventos se escriben en la misma clave `paradas-gps-v1` que el registro principal.
 
 ## Exportar datos
 

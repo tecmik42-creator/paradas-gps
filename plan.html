@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b3d2e" />
+  <meta name="description" content="Plan del día: configurar paradas, equipo y registrar en un toque." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Paradas GPS" />
+  <title>Plan del día · Paradas GPS</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="page-plan">
+  <header class="app-header">
+    <div class="header-nav">
+      <a href="index.html" class="nav-link" aria-label="Volver a Paradas">← Paradas</a>
+      <a href="clientes.html" class="nav-link" aria-label="Gestionar clientes">Clientes</a>
+    </div>
+    <h1>Plan del día</h1>
+    <p class="subtitle">Configura por toques · registra en segundos</p>
+  </header>
+
+  <main>
+    <!-- ——— Setup / nuevo bloque ——— -->
+    <section class="plan-setup" id="setupPanel" aria-labelledby="setupTitle">
+      <h2 id="setupTitle" class="section-title">Configurar bloque</h2>
+
+      <div class="plan-field">
+        <label for="inputFecha" class="field-label">Fecha</label>
+        <input type="date" id="inputFecha" class="plan-input" />
+      </div>
+
+      <div class="plan-field">
+        <label for="inputHoraInicio" class="field-label">Hora inicio</label>
+        <div class="time-row">
+          <button type="button" class="btn-time-adj" id="btnInicioMinus" aria-label="Restar 5 minutos">−5</button>
+          <input type="time" id="inputHoraInicio" class="plan-input plan-input-time" />
+          <button type="button" class="btn-time-adj" id="btnInicioPlus" aria-label="Sumar 5 minutos">+5</button>
+          <button type="button" class="btn-secondary btn-now" id="btnAhora" title="Usar hora actual">Ahora</button>
+        </div>
+      </div>
+
+      <div class="plan-field equipo-field">
+        <span class="equipo-label" id="equipoLabel">Equipo</span>
+        <div class="crew-toggles" role="group" aria-labelledby="equipoLabel" id="crewToggles">
+          <button type="button" class="crew-btn" data-name="Haydee" aria-pressed="false">Haydee</button>
+          <button type="button" class="crew-btn" data-name="Adriana" aria-pressed="false">Adriana</button>
+          <button type="button" class="crew-btn" data-name="Virginia" aria-pressed="false">Virginia</button>
+          <button type="button" class="crew-btn" data-name="Joy" aria-pressed="false">Joy</button>
+          <button type="button" class="crew-btn" data-name="Mikael" aria-pressed="false">Mikael</button>
+        </div>
+        <p class="hint-inline" id="crewHint" hidden>Selecciona al menos una persona del equipo.</p>
+      </div>
+
+      <div class="plan-field">
+        <span class="field-label" id="paradasLabel">Paradas del bloque</span>
+        <div class="quick-chips" role="group" aria-label="Accesos rápidos Coroso" id="quickChips"></div>
+        <label class="sr-only" for="searchParadas">Buscar parada</label>
+        <input
+          type="search"
+          id="searchParadas"
+          class="search-input"
+          placeholder="Buscar cliente…"
+          autocomplete="off"
+          enterkeyhint="search"
+        />
+        <div class="parada-pick-list" id="paradaPickList" role="listbox" aria-labelledby="paradasLabel"></div>
+        <div class="selected-stops" id="selectedStops" aria-live="polite"></div>
+      </div>
+
+      <div class="estimate-panel" id="estimatePanel" aria-live="polite">
+        <div class="estimate-grid">
+          <div class="estimate-item">
+            <span class="estimate-label">Equipo</span>
+            <strong id="estCrew">0</strong>
+          </div>
+          <div class="estimate-item">
+            <span class="estimate-label">Paradas</span>
+            <strong id="estStops">0</strong>
+          </div>
+          <div class="estimate-item">
+            <span class="estimate-label">Tiempo estimado</span>
+            <strong id="estDuration">—</strong>
+          </div>
+          <div class="estimate-item">
+            <span class="estimate-label">Hora fin estimada</span>
+            <strong id="estEnd">—</strong>
+          </div>
+        </div>
+        <p class="estimate-hint" id="estHint">
+          Ritmo: 2 personas = 1 h para 3 comunidades → 20 min/parada a 2 personas.
+          Fórmula: round(K × 20 × 2/N), mínimo 5 min.
+        </p>
+        <div class="plan-field override-end">
+          <label class="check-label">
+            <input type="checkbox" id="checkOverrideEnd" />
+            Ajustar hora fin a mano
+          </label>
+          <div class="time-row" id="overrideEndRow" hidden>
+            <input type="time" id="inputHoraFin" class="plan-input plan-input-time" />
+          </div>
+        </div>
+      </div>
+
+      <div class="plan-actions">
+        <button type="button" class="btn-save" id="btnGuardarPlan">Guardar plan</button>
+        <button type="button" class="btn-event btn-tarea plan-start-btn" id="btnEmpezar">
+          <span class="btn-icon" aria-hidden="true">▶️</span>
+          <span class="btn-label">Empezar jornada</span>
+        </button>
+      </div>
+      <p class="status-inline" id="setupStatus" aria-live="polite"></p>
+    </section>
+
+    <!-- ——— Jornada / checklist ——— -->
+    <section class="plan-day" id="dayPanel" hidden aria-labelledby="dayTitle">
+      <div class="day-header">
+        <h2 id="dayTitle" class="section-title">Jornada <span class="count" id="dayFecha"></span></h2>
+        <button type="button" class="btn-secondary" id="btnNuevoBloque">+ Bloque</button>
+      </div>
+      <div id="bloquesList" class="bloques-list"></div>
+      <div class="day-footer-actions">
+        <button type="button" class="btn-secondary" id="btnEditarSetup">Editar / añadir bloque</button>
+        <button type="button" class="btn-demo btn-demo-danger" id="btnBorrarPlan">Borrar plan del día</button>
+      </div>
+      <p class="status-inline" id="dayStatus" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <!-- Sheet mínimo: registrar con GPS -->
+  <div class="sheet-overlay" id="regOverlay" hidden>
+    <div class="sheet sheet-small" role="dialog" aria-modal="true" aria-labelledby="regTitle">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="regTitle">Registrar parada</h2>
+      <p class="sheet-tipo" id="regStopName"></p>
+      <div class="tipo-toggles" role="group" aria-label="Tipo de evento" id="regTipoToggles">
+        <button type="button" class="tipo-btn" data-evento="Traslado personal" aria-pressed="true">Traslado personal</button>
+        <button type="button" class="tipo-btn" data-evento="Tarea hecha" aria-pressed="false">Tarea hecha</button>
+      </div>
+      <div class="gps-block">
+        <p class="gps-status" id="regGpsStatus">Obteniendo GPS…</p>
+        <label class="check-label">
+          <input type="checkbox" id="regSinGps" />
+          Guardar sin GPS
+        </label>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn-cancel" id="btnCancelReg">Cancelar</button>
+        <button type="button" class="btn-save" id="btnConfirmReg">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Plan en este dispositivo · Europe/Madrid</p>
+  </footer>
+
+  <script src="plan.js"></script>
+</body>
+</html>

@@ -1,12 +1,14 @@
 /* Service Worker — Paradas GPS (caché offline) */
-const CACHE = "paradas-gps-v8";
+const CACHE = "paradas-gps-v9";
 const ASSETS = [
   "./",
   "./index.html",
   "./clientes.html",
+  "./plan.html",
   "./styles.css",
   "./app.js",
   "./clientes.js",
+  "./plan.js",
   "./manifest.json",
   "./icons/icon.svg",
   "./icons/icon-192.png",
