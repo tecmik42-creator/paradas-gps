@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Paradas GPS">
+  <rect width="512" height="512" rx="96" fill="#0b3d2e"/>
+  <circle cx="256" cy="220" r="110" fill="#3dff9a"/>
+  <circle cx="256" cy="220" r="48" fill="#0b3d2e"/>
+  <path d="M256 330 L190 450 H322 Z" fill="#3dff9a"/>
+  <circle cx="256" cy="220" r="18" fill="#3dff9a"/>
+</svg>

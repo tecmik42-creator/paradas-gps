@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b3d2e" />
+  <meta name="description" content="Registro geolocalizado de paradas de trabajo: recogidas, entregas, traslados y tareas." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Paradas GPS" />
+  <title>Paradas GPS</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Paradas GPS</h1>
+    <p class="subtitle">Registro de trabajo · ropa, alfombras y personal</p>
+  </header>
+
+  <main>
+    <section class="actions" aria-label="Registrar evento">
+      <button type="button" class="btn-event btn-recogida" data-tipo="Recogida" aria-label="Registrar recogida">
+        <span class="btn-icon" aria-hidden="true">📦</span>
+        <span class="btn-label">Recogida</span>
+      </button>
+      <button type="button" class="btn-event btn-entrega" data-tipo="Entrega" aria-label="Registrar entrega">
+        <span class="btn-icon" aria-hidden="true">🚚</span>
+        <span class="btn-label">Entrega</span>
+      </button>
+      <button type="button" class="btn-event btn-traslado" data-tipo="Traslado personal" aria-label="Registrar traslado de personal">
+        <span class="btn-icon" aria-hidden="true">👥</span>
+        <span class="btn-label">Traslado personal</span>
+      </button>
+      <button type="button" class="btn-event btn-tarea" data-tipo="Tarea hecha" aria-label="Registrar tarea hecha">
+        <span class="btn-icon" aria-hidden="true">✅</span>
+        <span class="btn-label">Tarea hecha</span>
+      </button>
+    </section>
+
+    <section class="toolbar" aria-label="Herramientas">
+      <div class="filters" role="group" aria-label="Filtrar historial">
+        <button type="button" class="filter-btn active" data-filter="hoy" id="filterHoy">Hoy</button>
+        <button type="button" class="filter-btn" data-filter="todos" id="filterTodos">Todos</button>
+      </div>
+      <div class="export-btns">
+        <button type="button" class="btn-secondary" id="btnExportCsv" title="Exportar CSV">CSV</button>
+        <button type="button" class="btn-secondary" id="btnExportJson" title="Exportar JSON">JSON</button>
+      </div>
+    </section>
+
+    <section class="demo-bar" aria-label="Día de referencia">
+      <button type="button" class="btn-demo" id="btnLoadSeed" title="Cargar lunes 14 sep 2026">Cargar día de referencia</button>
+      <button type="button" class="btn-demo btn-demo-danger" id="btnClearHistory" title="Vaciar historial">Vaciar historial</button>
+    </section>
+
+    <section class="status-bar" id="statusBar" aria-live="polite">
+      <span id="statusText">Listo. Pulsa un botón para registrar.</span>
+    </section>
+
+    <section class="history" aria-label="Historial de eventos">
+      <h2>Historial <span class="count" id="eventCount">(0)</span></h2>
+      <ul id="eventList" class="event-list"></ul>
+      <p class="empty-msg" id="emptyMsg">Aún no hay eventos. Pulsa un botón grande para empezar.</p>
+    </section>
+  </main>
+
+  <!-- Sheet: editar comunidad / notas antes o después de guardar -->
+  <div class="sheet-overlay" id="sheetOverlay" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="sheetTitle">Detalles del evento</h2>
+      <p class="sheet-tipo" id="sheetTipo"></p>
+
+      <label for="inputComunidad">Comunidad / casa <span class="optional">(opcional)</span></label>
+      <input type="text" id="inputComunidad" placeholder="Ej. Urbanización Las Flores · portal 3" autocomplete="off" />
+
+      <label for="inputEquipo">Equipo <span class="optional">(opcional)</span></label>
+      <input type="text" id="inputEquipo" placeholder="Ej. Vicky + Haydee · 3 personas" autocomplete="off" />
+
+      <label for="inputImporte">Importe (€) <span class="optional">(opcional)</span></label>
+      <input type="number" id="inputImporte" step="0.01" min="0" placeholder="Ej. 45.90" inputmode="decimal" />
+
+      <label for="inputNotas">Notas <span class="optional">(opcional)</span></label>
+      <textarea id="inputNotas" rows="3" placeholder="Ej. 3 bolsas ropa, alfombra 2×3…"></textarea>
+
+      <label class="check-label">
+        <input type="checkbox" id="checkAbierto" />
+        Dejar abierto
+      </label>
+
+      <div class="gps-block" id="gpsBlock">
+        <p class="gps-status" id="gpsStatus">Obteniendo GPS…</p>
+        <div class="manual-gps" id="manualGps" hidden>
+          <p class="hint">GPS no disponible. Guarda sin GPS o introduce coordenadas manualmente:</p>
+          <div class="coord-row">
+            <label for="inputLat">Latitud</label>
+            <input type="number" id="inputLat" step="any" placeholder="40.4168" inputmode="decimal" />
+          </div>
+          <div class="coord-row">
+            <label for="inputLng">Longitud</label>
+            <input type="number" id="inputLng" step="any" placeholder="-3.7038" inputmode="decimal" />
+          </div>
+          <label class="check-label">
+            <input type="checkbox" id="checkSinGps" />
+            Guardar sin GPS
+          </label>
+        </div>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="button" class="btn-cancel" id="btnCancelSheet">Cancelar</button>
+        <button type="button" class="btn-save" id="btnSaveSheet">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm delete -->
+  <div class="sheet-overlay" id="confirmOverlay" hidden>
+    <div class="sheet sheet-small" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle">¿Borrar evento?</h2>
+      <p id="confirmText">Esta acción no se puede deshacer.</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn-cancel" id="btnCancelDelete">Cancelar</button>
+        <button type="button" class="btn-danger" id="btnConfirmDelete">Borrar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Datos solo en este dispositivo · Europe/Madrid</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
