@@ -77,7 +77,7 @@ Una vez instalada, funciona a pantalla completa y puede usarse **sin conexión**
    - **Traslado personal**
    - **Tarea hecha**
 2. Se pide la ubicación de alta precisión. Mientras tanto (o después) puedes rellenar:
-   - **Tipo de lugar** (recomendado): Comunidad / Piso / Casa / Oficina
+   - **Tipo de lugar** (recomendado): chips dinámicos (por defecto Comunidad / Piso / Casa / Oficina; editables en Clientes → Tipos)
    - **Nombre** (opcional) con autocompletado desde clientes en `localStorage` (`paradas-gps-clientes`)
    - **Equipo** (opcional, chips o texto libre en eventos de demo)
    - **Importe (€)** (opcional)
@@ -95,10 +95,19 @@ Una vez instalada, funciona a pantalla completa y puede usarse **sin conexión**
 
 Página **Clientes** (`clientes.html`, enlace en la cabecera del registro) para gestionar la base local `paradas-gps-clientes` (`{id, tipo, nombre}`) que alimenta el autocompletado al registrar eventos.
 
-- Buscar por nombre (sin distinguir acentos) y filtrar por tipo (Comunidad / Piso / Casa / Oficina), con contadores.
+- Buscar por nombre (sin distinguir acentos) y filtrar por tipo, con contadores.
 - Añadir, editar y borrar clientes; al guardar, el mismo nombre normalizado + tipo actualiza en lugar de duplicar.
 - Exportar / importar la lista en JSON.
 - Los cambios se sincronizan al instante con el registro (misma clave `localStorage`).
+
+### Tipos de lugar (editables)
+
+Pestaña **Tipos** en la misma página. Se guardan en `localStorage` bajo `paradas-gps-tipos-cliente` como `{ id, nombre }`.
+
+- Si la clave está vacía, se siembran: Comunidad, Piso, Casa, Oficina (`comunidad`, `piso`, `casa`, `oficina`).
+- Puedes añadir, renombrar y borrar tipos. Al borrar un tipo en uso, la app pide reasignar esos clientes a otro tipo (o cancelar).
+- El registro (`app.js`) y los filtros/autocompletado leen los tipos de la misma clave (chips dinámicos).
+- En clientes y eventos, `tipo` / `cliente_tipo` guardan el **id** estable del tipo (compatible con datos y CSV previos). El `nombre` es lo que se muestra en chips y badges; al renombrar solo cambia la etiqueta.
 
 ## Exportar datos
 
@@ -123,7 +132,7 @@ La app incluye un **día de referencia real**: lunes **14 de septiembre de 2026*
 
 Algunas coordenadas son Nominatim/OSM reales (Amarella 4, CEIP Aguiño, Corrubedo, O Campiño, Xarás, calles Rosalía / Monumento / Miguel Rodríguez Bautista, Coroso). Otras son **aproximaciones** en la misma zona (Caramicheiros, Comunidad 84, Coral, Eco Cabañas / Crocha de Poniente, Av. Coruña 70 Faro, salida 12:00) con offsets distintos para que `maps_url` siga funcionando. Detalle en las notas de cada evento.
 
-Campos extra del modelo (opcionales): `cliente_tipo` (`comunidad` | `piso` | `casa` | `oficina`), `equipo`, `importe_eur`, `estado` (`cerrado` | `abierto`). El nombre del lugar sigue en `comunidad_casa` (compatibilidad CSV).
+Campos extra del modelo (opcionales): `cliente_tipo` (id del tipo en `paradas-gps-tipos-cliente`, p. ej. `comunidad`), `equipo`, `importe_eur`, `estado` (`cerrado` | `abierto`). El nombre del lugar sigue en `comunidad_casa` (compatibilidad CSV).
 
 ## Privacidad
 

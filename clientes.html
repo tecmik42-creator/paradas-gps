@@ -25,71 +25,89 @@
   </header>
 
   <main>
-    <section class="clientes-search" aria-label="Buscar clientes">
-      <label class="sr-only" for="searchClientes">Buscar por nombre</label>
-      <input
-        type="search"
-        id="searchClientes"
-        class="search-input"
-        placeholder="Buscar por nombre…"
-        autocomplete="off"
-        enterkeyhint="search"
-      />
-    </section>
+    <nav class="view-tabs" role="tablist" aria-label="Secciones">
+      <button type="button" class="view-tab active" role="tab" id="tabClientes" aria-selected="true" aria-controls="panelClientes" data-view="clientes">
+        Clientes
+      </button>
+      <button type="button" class="view-tab" role="tab" id="tabTipos" aria-selected="false" aria-controls="panelTipos" data-view="tipos">
+        Tipos
+      </button>
+    </nav>
 
-    <section class="clientes-filters" aria-label="Filtrar por tipo">
-      <div class="chip-row" role="group" id="filterChips">
-        <button type="button" class="chip-btn active" data-filter="todos" aria-pressed="true">
-          Todos <span class="chip-count" data-count-for="todos">0</span>
-        </button>
-        <button type="button" class="chip-btn" data-filter="comunidad" aria-pressed="false">
-          Comunidad <span class="chip-count" data-count-for="comunidad">0</span>
-        </button>
-        <button type="button" class="chip-btn" data-filter="piso" aria-pressed="false">
-          Piso <span class="chip-count" data-count-for="piso">0</span>
-        </button>
-        <button type="button" class="chip-btn" data-filter="casa" aria-pressed="false">
-          Casa <span class="chip-count" data-count-for="casa">0</span>
-        </button>
-        <button type="button" class="chip-btn" data-filter="oficina" aria-pressed="false">
-          Oficina <span class="chip-count" data-count-for="oficina">0</span>
-        </button>
-      </div>
-    </section>
+    <div id="panelClientes" role="tabpanel" aria-labelledby="tabClientes">
+      <section class="clientes-search" aria-label="Buscar clientes">
+        <label class="sr-only" for="searchClientes">Buscar por nombre</label>
+        <input
+          type="search"
+          id="searchClientes"
+          class="search-input"
+          placeholder="Buscar por nombre…"
+          autocomplete="off"
+          enterkeyhint="search"
+        />
+      </section>
 
-    <section class="clientes-add" aria-labelledby="addTitle">
-      <h2 id="addTitle" class="section-title">Añadir cliente</h2>
-      <div class="tipo-toggles" role="group" aria-label="Tipo de lugar" id="addTipoToggles">
-        <button type="button" class="tipo-btn" data-tipo="comunidad" aria-pressed="false">Comunidad</button>
-        <button type="button" class="tipo-btn" data-tipo="piso" aria-pressed="false">Piso</button>
-        <button type="button" class="tipo-btn" data-tipo="casa" aria-pressed="false">Casa</button>
-        <button type="button" class="tipo-btn" data-tipo="oficina" aria-pressed="false">Oficina</button>
-      </div>
-      <label for="addNombre" class="field-label">Nombre</label>
-      <div class="add-row">
-        <input type="text" id="addNombre" placeholder="Ej. Coroso 1…" autocomplete="off" />
-        <button type="button" class="btn-save" id="btnAddSave">Guardar</button>
-      </div>
-      <p class="hint-inline" id="addHint" hidden></p>
-    </section>
+      <section class="clientes-filters" aria-label="Filtrar por tipo">
+        <div class="chip-row" role="group" id="filterChips"></div>
+      </section>
 
-    <section class="status-bar" id="statusBar" aria-live="polite">
-      <span id="statusText">Listo.</span>
-    </section>
+      <section class="clientes-add" aria-labelledby="addTitle">
+        <h2 id="addTitle" class="section-title">Añadir cliente</h2>
+        <div class="tipo-toggles" role="group" aria-label="Tipo de lugar" id="addTipoToggles"></div>
+        <label for="addNombre" class="field-label">Nombre</label>
+        <div class="add-row">
+          <input type="text" id="addNombre" placeholder="Ej. Coroso 1…" autocomplete="off" />
+          <button type="button" class="btn-save" id="btnAddSave">Guardar</button>
+        </div>
+        <p class="hint-inline" id="addHint" hidden></p>
+      </section>
 
-    <section class="clientes-list-section" aria-label="Lista de clientes">
-      <h2 class="section-title">
-        Lista <span class="count" id="listCount">(0)</span>
-      </h2>
-      <div id="clientesList" class="clientes-list"></div>
-      <p class="empty-msg" id="emptyMsg" hidden>No hay clientes. Añade el primero arriba.</p>
-    </section>
+      <section class="status-bar" id="statusBar" aria-live="polite">
+        <span id="statusText">Listo.</span>
+      </section>
 
-    <section class="clientes-io" aria-label="Importar y exportar">
-      <button type="button" class="btn-secondary" id="btnExportClientes">Exportar JSON</button>
-      <button type="button" class="btn-secondary" id="btnImportClientes">Importar JSON</button>
-      <input type="file" id="importFile" accept="application/json,.json" hidden />
-    </section>
+      <section class="clientes-list-section" aria-label="Lista de clientes">
+        <h2 class="section-title">
+          Lista <span class="count" id="listCount">(0)</span>
+        </h2>
+        <div id="clientesList" class="clientes-list"></div>
+        <p class="empty-msg" id="emptyMsg" hidden>No hay clientes. Añade el primero arriba.</p>
+      </section>
+
+      <section class="clientes-io" aria-label="Importar y exportar">
+        <button type="button" class="btn-secondary" id="btnExportClientes">Exportar JSON</button>
+        <button type="button" class="btn-secondary" id="btnImportClientes">Importar JSON</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden />
+      </section>
+    </div>
+
+    <div id="panelTipos" role="tabpanel" aria-labelledby="tabTipos" hidden>
+      <section class="tipos-intro" aria-labelledby="tiposTitle">
+        <h2 id="tiposTitle" class="section-title">Tipos de lugar</h2>
+        <p class="tipos-hint">Estos tipos aparecen como chips al registrar eventos y al filtrar clientes. Se guardan en este dispositivo.</p>
+      </section>
+
+      <section class="tipos-add" aria-label="Añadir tipo">
+        <label for="addTipoNombre" class="field-label">Nuevo tipo</label>
+        <div class="add-row">
+          <input type="text" id="addTipoNombre" placeholder="Ej. Local comercial…" autocomplete="off" maxlength="40" />
+          <button type="button" class="btn-save" id="btnAddTipo">Añadir</button>
+        </div>
+        <p class="hint-inline" id="addTipoHint" hidden></p>
+      </section>
+
+      <section class="status-bar" id="tiposStatusBar" aria-live="polite">
+        <span id="tiposStatusText">Listo.</span>
+      </section>
+
+      <section class="tipos-list-section" aria-label="Lista de tipos">
+        <h2 class="section-title">
+          Lista <span class="count" id="tiposListCount">(0)</span>
+        </h2>
+        <ul id="tiposList" class="tipos-list"></ul>
+        <p class="empty-msg" id="tiposEmptyMsg" hidden>No hay tipos. Añade el primero arriba.</p>
+      </section>
+    </div>
   </main>
 
   <!-- Sheet: editar cliente -->
@@ -99,12 +117,7 @@
       <h2 id="editTitle">Editar cliente</h2>
 
       <span class="cliente-label" id="editTipoLabel">Tipo de lugar</span>
-      <div class="tipo-toggles" role="group" aria-labelledby="editTipoLabel" id="editTipoToggles">
-        <button type="button" class="tipo-btn" data-tipo="comunidad" aria-pressed="false">Comunidad</button>
-        <button type="button" class="tipo-btn" data-tipo="piso" aria-pressed="false">Piso</button>
-        <button type="button" class="tipo-btn" data-tipo="casa" aria-pressed="false">Casa</button>
-        <button type="button" class="tipo-btn" data-tipo="oficina" aria-pressed="false">Oficina</button>
-      </div>
+      <div class="tipo-toggles" role="group" aria-labelledby="editTipoLabel" id="editTipoToggles"></div>
 
       <label for="editNombre">Nombre</label>
       <input type="text" id="editNombre" placeholder="Nombre del cliente" autocomplete="off" />
@@ -116,7 +129,7 @@
     </div>
   </div>
 
-  <!-- Confirm delete -->
+  <!-- Confirm delete cliente -->
   <div class="sheet-overlay" id="confirmOverlay" hidden>
     <div class="sheet sheet-small" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
       <h2 id="confirmTitle">¿Borrar cliente?</h2>
@@ -124,6 +137,38 @@
       <div class="sheet-actions">
         <button type="button" class="btn-cancel" id="btnCancelDelete">Cancelar</button>
         <button type="button" class="btn-danger" id="btnConfirmDelete">Borrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sheet: renombrar tipo -->
+  <div class="sheet-overlay" id="renameTipoOverlay" hidden>
+    <div class="sheet sheet-small" role="dialog" aria-modal="true" aria-labelledby="renameTipoTitle">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="renameTipoTitle">Renombrar tipo</h2>
+      <label for="renameTipoNombre">Nombre</label>
+      <input type="text" id="renameTipoNombre" placeholder="Nombre del tipo" autocomplete="off" maxlength="40" />
+      <p class="hint-inline" id="renameTipoHint" hidden></p>
+      <div class="sheet-actions">
+        <button type="button" class="btn-cancel" id="btnCancelRenameTipo">Cancelar</button>
+        <button type="button" class="btn-save" id="btnSaveRenameTipo">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sheet: borrar tipo (con reasignación) -->
+  <div class="sheet-overlay" id="deleteTipoOverlay" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="deleteTipoTitle">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="deleteTipoTitle">¿Borrar tipo?</h2>
+      <p id="deleteTipoText">Esta acción no se puede deshacer.</p>
+      <div id="reassignWrap" class="reassign-wrap" hidden>
+        <label for="reassignTipoSelect" class="field-label">Reasignar clientes a</label>
+        <select id="reassignTipoSelect" class="reassign-select"></select>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn-cancel" id="btnCancelDeleteTipo">Cancelar</button>
+        <button type="button" class="btn-danger" id="btnConfirmDeleteTipo">Borrar</button>
       </div>
     </div>
   </div>

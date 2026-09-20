@@ -8,15 +8,15 @@
   const STORAGE_KEY = "paradas-gps-v1";
   const SEEDED_FLAG = "paradas-gps-seeded-v1";
   const CLIENTES_KEY = "paradas-gps-clientes";
+  const TIPOS_KEY = "paradas-gps-tipos-cliente";
   const TZ = "Europe/Madrid";
 
-  const CLIENTE_TIPOS = ["comunidad", "piso", "casa", "oficina"];
-  const CLIENTE_TIPO_LABELS = {
-    comunidad: "Comunidad",
-    piso: "Piso",
-    casa: "Casa",
-    oficina: "Oficina",
-  };
+  const DEFAULT_TIPOS = [
+    { id: "comunidad", nombre: "Comunidad" },
+    { id: "piso", nombre: "Piso" },
+    { id: "casa", nombre: "Casa" },
+    { id: "oficina", nombre: "Oficina" },
+  ];
 
   /** @typedef {{
    *   id: string,
@@ -26,7 +26,7 @@
    *   lng: number|null,
    *   accuracy_m: number|null,
    *   comunidad_casa: string,
-   *   cliente_tipo?: ""|"comunidad"|"piso"|"casa"|"oficina",
+   *   cliente_tipo?: string,
    *   notas: string,
    *   sin_gps: boolean,
    *   equipo?: string,
@@ -35,6 +35,7 @@
    * }} Evento */
 
   /** @typedef {{ id: string, tipo: string, nombre: string }} Cliente */
+  /** @typedef {{ id: string, nombre: string }} TipoCliente */
 
   // ——— DOM ———
   const $ = (sel) => document.querySelector(sel);
@@ -66,7 +67,7 @@
   const confirmText = $("#confirmText");
 
   /** @type {Evento[]} */
-  let events = loadEvents();
+  let events = [];
   /** @type {"hoy"|"todos"} */
   let filterMode = "hoy";
   /** Sheet state */
@@ -79,10 +80,12 @@
   let geoState = resetGeo();
   /** @type {string|null} */
   let deleteTargetId = null;
-  /** @type {string} selected cliente tipo chip */
+  /** @type {string} selected cliente tipo chip (tipo id) */
   let selectedClienteTipo = "";
   /** @type {Cliente[]} */
   let clientes = [];
+  /** @type {TipoCliente[]} */
+  let tipos = [];
   /** @type {number} */
   let suggestActiveIdx = -1;
   /** @type {number|null} */
@@ -113,11 +116,10 @@
   }
 
   function normalizeEvent(ev) {
-    const ct = ev.cliente_tipo != null ? String(ev.cliente_tipo).toLowerCase() : "";
     return {
       ...ev,
       comunidad_casa: ev.comunidad_casa != null ? String(ev.comunidad_casa) : "",
-      cliente_tipo: CLIENTE_TIPOS.includes(ct) ? ct : "",
+      cliente_tipo: resolveTipoId(ev.cliente_tipo),
       equipo: ev.equipo != null ? String(ev.equipo) : "",
       importe_eur:
         ev.importe_eur === "" || ev.importe_eur == null
@@ -136,6 +138,98 @@
       Date.now().toString(36) +
       Math.random().toString(36).slice(2, 9)
     );
+  }
+
+  // ——— Tipos de cliente (localStorage) ———
+  function seedTipos() {
+    return DEFAULT_TIPOS.map((t) => ({ ...t }));
+  }
+
+  function normalizeTipo(t) {
+    const id = String(t.id || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    const nombre = String(t.nombre || "").trim();
+    if (!id || !nombre) return null;
+    return { id, nombre };
+  }
+
+  function loadTipos() {
+    try {
+      const raw = localStorage.getItem(TIPOS_KEY);
+      if (!raw) {
+        const seeded = seedTipos();
+        localStorage.setItem(TIPOS_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        const seeded = seedTipos();
+        localStorage.setItem(TIPOS_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      const seen = new Set();
+      const list = [];
+      for (const rawT of parsed) {
+        const t = normalizeTipo(rawT);
+        if (!t || seen.has(t.id)) continue;
+        seen.add(t.id);
+        list.push(t);
+      }
+      if (!list.length) {
+        const seeded = seedTipos();
+        localStorage.setItem(TIPOS_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      return list;
+    } catch {
+      return seedTipos();
+    }
+  }
+
+  function isKnownTipo(id) {
+    return tipos.some((t) => t.id === id);
+  }
+
+  function tipoLabel(id) {
+    if (!id) return "";
+    const t = tipos.find((x) => x.id === id);
+    return t ? t.nombre : id;
+  }
+
+  /** Resolve raw value (id or legacy display name) to a tipo id. */
+  function resolveTipoId(raw) {
+    const catalog = tipos.length ? tipos : DEFAULT_TIPOS;
+    const s = String(raw || "").trim();
+    if (!s) return "";
+    const lower = s.toLowerCase();
+    if (catalog.some((t) => t.id === lower)) return lower;
+    if (catalog.some((t) => t.id === s)) return s;
+    const n = normalizeText(s);
+    const byNombre = catalog.find((t) => normalizeText(t.nombre) === n);
+    if (byNombre) return byNombre.id;
+    return lower.replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "";
+  }
+
+  function badgeClassForTipo(tipoId) {
+    if (!tipoId) return "badge-cliente";
+    const safe = String(tipoId).replace(/[^a-z0-9_-]/gi, "");
+    return `badge-cliente badge-cliente-${safe}`;
+  }
+
+  function renderTipoToggles() {
+    if (!tipoToggles) return;
+    const selected = selectedClienteTipo;
+    tipoToggles.innerHTML = tipos
+      .map(
+        (t) =>
+          `<button type="button" class="tipo-btn" data-tipo="${escapeHtml(t.id)}" aria-pressed="${
+            selected === t.id ? "true" : "false"
+          }">${escapeHtml(t.nombre)}</button>`
+      )
+      .join("");
   }
 
   // ——— Clientes (localStorage) ———
@@ -187,9 +281,10 @@
         .filter((c) => c && typeof c.nombre === "string" && c.nombre.trim())
         .map((c) => ({
           id: c.id || uid(),
-          tipo: CLIENTE_TIPOS.includes(String(c.tipo || "").toLowerCase())
-            ? String(c.tipo).toLowerCase()
-            : "",
+          tipo: (() => {
+            const id = resolveTipoId(c.tipo);
+            return isKnownTipo(id) ? id : "";
+          })(),
           nombre: String(c.nombre).trim(),
         }));
       // Merge any missing seed names (does not overwrite existing)
@@ -219,7 +314,7 @@
     const name = String(nombre || "").trim();
     if (!name) return;
     const key = normalizeText(name);
-    const tip = CLIENTE_TIPOS.includes(tipo) ? tipo : "";
+    const tip = isKnownTipo(tipo) ? tipo : "";
     const idx = clientes.findIndex((c) => normalizeText(c.nombre) === key);
     if (idx === -1) {
       clientes.push({ id: uid(), tipo: tip, nombre: name });
@@ -257,7 +352,8 @@
   }
 
   function setClienteTipo(tipo) {
-    selectedClienteTipo = CLIENTE_TIPOS.includes(tipo) ? tipo : "";
+    const id = resolveTipoId(tipo);
+    selectedClienteTipo = isKnownTipo(id) ? id : "";
     tipoToggles.querySelectorAll(".tipo-btn").forEach((btn) => {
       const on = btn.dataset.tipo === selectedClienteTipo;
       btn.setAttribute("aria-pressed", on ? "true" : "false");
@@ -282,11 +378,9 @@
     }
     suggestList.innerHTML = matches
       .map((c, i) => {
-        const tipoLabel = c.tipo
-          ? CLIENTE_TIPO_LABELS[c.tipo] || c.tipo
-          : "";
-        const tipoHtml = tipoLabel
-          ? `<span class="suggest-tipo">${escapeHtml(tipoLabel)}</span>`
+        const label = c.tipo ? tipoLabel(c.tipo) : "";
+        const tipoHtml = label
+          ? `<span class="suggest-tipo">${escapeHtml(label)}</span>`
           : "";
         return `<li role="option" id="suggest-opt-${i}">
           <button type="button" class="suggest-item" data-idx="${i}" data-id="${escapeHtml(c.id)}">
@@ -718,8 +812,8 @@
             </div>`;
 
       const tipoBadge = ev.cliente_tipo
-        ? `<span class="badge-cliente badge-cliente-${escapeHtml(ev.cliente_tipo)}">${escapeHtml(
-            CLIENTE_TIPO_LABELS[ev.cliente_tipo] || ev.cliente_tipo
+        ? `<span class="${badgeClassForTipo(ev.cliente_tipo)}">${escapeHtml(
+            tipoLabel(ev.cliente_tipo)
           )}</span>`
         : "";
       const comunidad = ev.comunidad_casa || ev.cliente_tipo
@@ -953,6 +1047,8 @@
 
   // ——— Sheet ———
   function openNewSheet(tipo) {
+    tipos = loadTipos();
+    renderTipoToggles();
     sheetMode = "new";
     editingId = null;
     pendingTipo = tipo;
@@ -978,6 +1074,8 @@
   function openEditSheet(id) {
     const ev = events.find((e) => e.id === id);
     if (!ev) return;
+    tipos = loadTipos();
+    renderTipoToggles();
     sheetMode = "edit";
     editingId = id;
     pendingTipo = ev.tipo;
@@ -1448,7 +1546,10 @@
   }
 
   // Init
+  tipos = loadTipos();
+  events = loadEvents();
   clientes = loadClientes();
+  renderTipoToggles();
   maybeAutoSeed();
   renderList();
   if (events.length === 0) {
