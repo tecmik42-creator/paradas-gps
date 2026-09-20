@@ -7,7 +7,16 @@
 
   const STORAGE_KEY = "paradas-gps-v1";
   const SEEDED_FLAG = "paradas-gps-seeded-v1";
+  const CLIENTES_KEY = "paradas-gps-clientes";
   const TZ = "Europe/Madrid";
+
+  const CLIENTE_TIPOS = ["comunidad", "piso", "casa", "oficina"];
+  const CLIENTE_TIPO_LABELS = {
+    comunidad: "Comunidad",
+    piso: "Piso",
+    casa: "Casa",
+    oficina: "Oficina",
+  };
 
   /** @typedef {{
    *   id: string,
@@ -17,12 +26,15 @@
    *   lng: number|null,
    *   accuracy_m: number|null,
    *   comunidad_casa: string,
+   *   cliente_tipo?: ""|"comunidad"|"piso"|"casa"|"oficina",
    *   notas: string,
    *   sin_gps: boolean,
    *   equipo?: string,
    *   importe_eur?: number|null,
    *   estado?: "cerrado"|"abierto"
    * }} Evento */
+
+  /** @typedef {{ id: string, tipo: string, nombre: string }} Cliente */
 
   // ——— DOM ———
   const $ = (sel) => document.querySelector(sel);
@@ -34,7 +46,9 @@
   const sheetOverlay = $("#sheetOverlay");
   const confirmOverlay = $("#confirmOverlay");
   const sheetTipo = $("#sheetTipo");
-  const inputComunidad = $("#inputComunidad");
+  const tipoToggles = $("#tipoToggles");
+  const inputNombre = $("#inputNombre");
+  const suggestList = $("#suggestList");
   const crewToggles = $("#crewToggles");
   const CREW = ["Haydee", "Adriana", "Virginia", "Joy", "Mikael"];
   const inputImporte = $("#inputImporte");
@@ -65,6 +79,14 @@
   let geoState = resetGeo();
   /** @type {string|null} */
   let deleteTargetId = null;
+  /** @type {string} selected cliente tipo chip */
+  let selectedClienteTipo = "";
+  /** @type {Cliente[]} */
+  let clientes = [];
+  /** @type {number} */
+  let suggestActiveIdx = -1;
+  /** @type {number|null} */
+  let suggestBlurTimer = null;
 
   function resetGeo() {
     return {
@@ -91,8 +113,11 @@
   }
 
   function normalizeEvent(ev) {
+    const ct = ev.cliente_tipo != null ? String(ev.cliente_tipo).toLowerCase() : "";
     return {
       ...ev,
+      comunidad_casa: ev.comunidad_casa != null ? String(ev.comunidad_casa) : "",
+      cliente_tipo: CLIENTE_TIPOS.includes(ct) ? ct : "",
       equipo: ev.equipo != null ? String(ev.equipo) : "",
       importe_eur:
         ev.importe_eur === "" || ev.importe_eur == null
@@ -111,6 +136,186 @@
       Date.now().toString(36) +
       Math.random().toString(36).slice(2, 9)
     );
+  }
+
+  // ——— Clientes (localStorage) ———
+  function normalizeText(s) {
+    return String(s || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  function seedClientes() {
+    return [
+      { id: "c-coroso-1", tipo: "comunidad", nombre: "Coroso 1" },
+      { id: "c-coroso-2", tipo: "comunidad", nombre: "Coroso 2" },
+      { id: "c-coroso-3", tipo: "comunidad", nombre: "Coroso 3" },
+      { id: "c-caramicheiros", tipo: "comunidad", nombre: "Caramicheiros" },
+      { id: "c-comunidad-84", tipo: "comunidad", nombre: "Comunidad 84" },
+      { id: "c-amarella-4", tipo: "comunidad", nombre: "Amarella 4" },
+      { id: "c-do-campo", tipo: "comunidad", nombre: "Do Campo" },
+      { id: "c-coral", tipo: "comunidad", nombre: "Coral" },
+      { id: "c-monumento-14", tipo: "comunidad", nombre: "Monumento 14" },
+      { id: "c-piso-negro", tipo: "piso", nombre: "Piso negro" },
+      { id: "c-froiz", tipo: "oficina", nombre: "Froiz" },
+      { id: "c-gestoria", tipo: "oficina", nombre: "Gestoría Rosalía de Castro 34" },
+      { id: "c-faro", tipo: "oficina", nombre: "Restaurante Faro" },
+      { id: "c-eco-cabanas", tipo: "casa", nombre: "Eco Cabañas" },
+      { id: "c-campino", tipo: "casa", nombre: "O Campiño" },
+      { id: "c-colexio", tipo: "oficina", nombre: "Colexio Aguiño" },
+      { id: "c-pautada", tipo: "oficina", nombre: "A Pautada" },
+    ];
+  }
+
+  function loadClientes() {
+    try {
+      const raw = localStorage.getItem(CLIENTES_KEY);
+      if (!raw) {
+        const seeded = seedClientes();
+        localStorage.setItem(CLIENTES_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        const seeded = seedClientes();
+        localStorage.setItem(CLIENTES_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      const list = parsed
+        .filter((c) => c && typeof c.nombre === "string" && c.nombre.trim())
+        .map((c) => ({
+          id: c.id || uid(),
+          tipo: CLIENTE_TIPOS.includes(String(c.tipo || "").toLowerCase())
+            ? String(c.tipo).toLowerCase()
+            : "",
+          nombre: String(c.nombre).trim(),
+        }));
+      // Merge any missing seed names (does not overwrite existing)
+      const byKey = new Map(list.map((c) => [normalizeText(c.nombre), c]));
+      let merged = false;
+      for (const s of seedClientes()) {
+        const k = normalizeText(s.nombre);
+        if (!byKey.has(k)) {
+          list.push(s);
+          byKey.set(k, s);
+          merged = true;
+        }
+      }
+      if (merged) localStorage.setItem(CLIENTES_KEY, JSON.stringify(list));
+      return list;
+    } catch {
+      return seedClientes();
+    }
+  }
+
+  function saveClientes() {
+    localStorage.setItem(CLIENTES_KEY, JSON.stringify(clientes));
+  }
+
+  /** Upsert by accent/case-insensitive nombre; updates tipo if provided. */
+  function upsertCliente(nombre, tipo) {
+    const name = String(nombre || "").trim();
+    if (!name) return;
+    const key = normalizeText(name);
+    const tip = CLIENTE_TIPOS.includes(tipo) ? tipo : "";
+    const idx = clientes.findIndex((c) => normalizeText(c.nombre) === key);
+    if (idx === -1) {
+      clientes.push({ id: uid(), tipo: tip, nombre: name });
+      saveClientes();
+      return;
+    }
+    const prev = clientes[idx];
+    let changed = false;
+    if (tip && prev.tipo !== tip) {
+      prev.tipo = tip;
+      changed = true;
+    }
+    // Keep nicer casing if user typed a different form of same name
+    if (prev.nombre !== name) {
+      prev.nombre = name;
+      changed = true;
+    }
+    if (changed) saveClientes();
+  }
+
+  function filterClientes(query) {
+    const q = normalizeText(query);
+    if (!q) return [];
+    return clientes
+      .filter((c) => normalizeText(c.nombre).includes(q))
+      .sort((a, b) => {
+        const an = normalizeText(a.nombre);
+        const bn = normalizeText(b.nombre);
+        const aStarts = an.startsWith(q) ? 0 : 1;
+        const bStarts = bn.startsWith(q) ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        return an.localeCompare(bn, "es");
+      })
+      .slice(0, 8);
+  }
+
+  function setClienteTipo(tipo) {
+    selectedClienteTipo = CLIENTE_TIPOS.includes(tipo) ? tipo : "";
+    tipoToggles.querySelectorAll(".tipo-btn").forEach((btn) => {
+      const on = btn.dataset.tipo === selectedClienteTipo;
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  function clearClienteTipo() {
+    setClienteTipo("");
+  }
+
+  function hideSuggestions() {
+    suggestList.hidden = true;
+    suggestList.innerHTML = "";
+    suggestActiveIdx = -1;
+    inputNombre.setAttribute("aria-expanded", "false");
+  }
+
+  function showSuggestions(matches) {
+    if (!matches.length) {
+      hideSuggestions();
+      return;
+    }
+    suggestList.innerHTML = matches
+      .map((c, i) => {
+        const tipoLabel = c.tipo
+          ? CLIENTE_TIPO_LABELS[c.tipo] || c.tipo
+          : "";
+        const tipoHtml = tipoLabel
+          ? `<span class="suggest-tipo">${escapeHtml(tipoLabel)}</span>`
+          : "";
+        return `<li role="option" id="suggest-opt-${i}">
+          <button type="button" class="suggest-item" data-idx="${i}" data-id="${escapeHtml(c.id)}">
+            <span class="suggest-nombre">${escapeHtml(c.nombre)}</span>
+            ${tipoHtml}
+          </button>
+        </li>`;
+      })
+      .join("");
+    suggestList.hidden = false;
+    suggestActiveIdx = -1;
+    inputNombre.setAttribute("aria-expanded", "true");
+    suggestList._matches = matches;
+  }
+
+  function applySuggestion(cliente) {
+    if (!cliente) return;
+    inputNombre.value = cliente.nombre;
+    if (cliente.tipo) setClienteTipo(cliente.tipo);
+    hideSuggestions();
+  }
+
+  function refreshSuggestionsFromInput() {
+    const q = inputNombre.value.trim();
+    if (!q) {
+      hideSuggestions();
+      return;
+    }
+    showSuggestions(filterClientes(q));
   }
 
   // ——— Tiempo Europe/Madrid ———
@@ -205,6 +410,7 @@
         equipo: "",
         importe_eur: null,
         estado: "cerrado",
+        cliente_tipo: "",
         ...partial,
       });
     };
@@ -217,6 +423,7 @@
         lat: 42.5685821,
         lng: -8.9855375,
         comunidad_casa: "Coroso 1, 2, 3",
+        cliente_tipo: "comunidad",
         equipo: "3 personas",
         notas: "Ritmo 3 personas ~45 min. Fin estimado ~08:50–08:55.",
       }),
@@ -227,6 +434,7 @@
         lat: 42.5721,
         lng: -8.9912,
         comunidad_casa: "Caramicheiros",
+        cliente_tipo: "comunidad",
         equipo: "3 personas",
         notas: "Fin ~09:35. Recogiste a Vicky. (coords aproximadas Ribeira)",
       }),
@@ -237,6 +445,7 @@
         lat: 42.5558,
         lng: -8.9905,
         comunidad_casa: "Comunidad 84",
+        cliente_tipo: "comunidad",
         equipo: "Vicky + Haydee",
         notas: "Hasta ~10:10. (coords aproximadas centro Ribeira)",
       }),
@@ -246,7 +455,8 @@
         tipo: "Traslado personal",
         lat: 42.5536181,
         lng: -8.9920011,
-        comunidad_casa: "Rúa da Amarella 4",
+        comunidad_casa: "Amarella 4",
+        cliente_tipo: "comunidad",
         equipo: "Joy + Adriana",
         notas: "~09:46 → ~10:15.",
       }),
@@ -256,7 +466,8 @@
         tipo: "Traslado personal",
         lat: 42.5568184,
         lng: -8.9945492,
-        comunidad_casa: "Do Campo · Avda. Miguel Rodríguez Bautista 28",
+        comunidad_casa: "Do Campo",
+        cliente_tipo: "comunidad",
         equipo: "Vicky + Haydee",
         notas: "10:20 → 10:53.",
       }),
@@ -266,7 +477,8 @@
         tipo: "Tarea hecha",
         lat: 42.55455,
         lng: -8.9924,
-        comunidad_casa: "Gestoría · Rosalía de Castro 34",
+        comunidad_casa: "Gestoría Rosalía de Castro 34",
+        cliente_tipo: "oficina",
         notas: "Copias de llaves. (coords calle Rosalía, nº aproximado)",
       }),
       // 7. Froiz Rosalía 58 — dejadas 10:30 ABIERTO (Adriana sin recogida)
@@ -275,7 +487,8 @@
         tipo: "Traslado personal",
         lat: 42.5553349,
         lng: -8.9911353,
-        comunidad_casa: "Rosalía de Castro 58 · Froiz",
+        comunidad_casa: "Froiz",
+        cliente_tipo: "oficina",
         equipo: "Joy + Adriana",
         estado: "abierto",
         notas:
@@ -288,6 +501,7 @@
         lat: 42.5542,
         lng: -8.9898,
         comunidad_casa: "Coral",
+        cliente_tipo: "comunidad",
         equipo: "3 personas",
         notas: "11:02 → 11:20. (coords aproximadas Ribeira)",
       }),
@@ -298,6 +512,7 @@
         lat: 42.5529742,
         lng: -8.9926818,
         comunidad_casa: "Monumento 14",
+        cliente_tipo: "comunidad",
         equipo: "3 personas",
         notas: "Tras Coral, a las 11:22.",
       }),
@@ -307,8 +522,8 @@
         tipo: "Recogida",
         lat: 42.531213,
         lng: -9.0143078,
-        comunidad_casa:
-          "Colexio Aguiño · CEIP Heroínas de Sálvora, Rúa do Falcoeiro 10",
+        comunidad_casa: "Colexio Aguiño",
+        cliente_tipo: "oficina",
         estado: "abierto",
         notas: "Alfombras lavadas. Entrega no cerrada (dejar abierto).",
       }),
@@ -327,7 +542,8 @@
         tipo: "Entrega",
         lat: 42.5905,
         lng: -8.9485,
-        comunidad_casa: "Eco Cabañas · Crocha de Poniente 31",
+        comunidad_casa: "Eco Cabañas",
+        cliente_tipo: "casa",
         notas: "Entrega ropa limpia. (coords aproximadas zona O Xobre)",
       }),
       // 13b. Eco Cabañas recogida
@@ -336,7 +552,8 @@
         tipo: "Recogida",
         lat: 42.59052,
         lng: -8.94848,
-        comunidad_casa: "Eco Cabañas · Crocha de Poniente 31",
+        comunidad_casa: "Eco Cabañas",
+        cliente_tipo: "casa",
         notas: "Recogiste 3 bolsas negras. (coords aproximadas zona O Xobre)",
       }),
       // 14. O Campiño — NOMINATIM hamlet area
@@ -345,7 +562,8 @@
         tipo: "Entrega",
         lat: 42.5928611,
         lng: -8.9467356,
-        comunidad_casa: "O Campiño (O Xobre)",
+        comunidad_casa: "O Campiño",
+        cliente_tipo: "casa",
         importe_eur: 45.9,
         notas: "Sin ropa a recoger. Importe 45,90 €.",
       }),
@@ -355,7 +573,8 @@
         tipo: "Tarea hecha",
         lat: 42.5574,
         lng: -8.9958,
-        comunidad_casa: "Restaurante Faro · Av. de la Coruña 70",
+        comunidad_casa: "Restaurante Faro",
+        cliente_tipo: "oficina",
         equipo: "Joy",
         notas: "Cristales. Plan 13:00, real ~13:35 (+35). (coords aproximadas Ribeira)",
       }),
@@ -365,7 +584,8 @@
         tipo: "Tarea hecha",
         lat: 42.5830713,
         lng: -9.0691824,
-        comunidad_casa: "Piso negro · Corrubedo",
+        comunidad_casa: "Piso negro",
+        cliente_tipo: "piso",
         equipo: "Haydee + Vicky + tú",
         notas: "~14:00 → ~14:45. (coords parroquia Corrubedo)",
       }),
@@ -375,7 +595,8 @@
         tipo: "Tarea hecha",
         lat: 42.5741936,
         lng: -8.9987657,
-        comunidad_casa: "A Pautada · Parque Empresarial de Xarás",
+        comunidad_casa: "A Pautada",
+        cliente_tipo: "oficina",
         notas: "Ventana 14:00–15:00; fin real 16:30.",
       }),
     ];
@@ -496,8 +717,15 @@
               }
             </div>`;
 
-      const comunidad = ev.comunidad_casa
-        ? `<div class="event-meta"><strong>Lugar:</strong> ${escapeHtml(ev.comunidad_casa)}</div>`
+      const tipoBadge = ev.cliente_tipo
+        ? `<span class="badge-cliente badge-cliente-${escapeHtml(ev.cliente_tipo)}">${escapeHtml(
+            CLIENTE_TIPO_LABELS[ev.cliente_tipo] || ev.cliente_tipo
+          )}</span>`
+        : "";
+      const comunidad = ev.comunidad_casa || ev.cliente_tipo
+        ? `<div class="event-meta"><strong>Lugar:</strong> ${tipoBadge}${
+            ev.comunidad_casa ? escapeHtml(ev.comunidad_casa) : ""
+          }</div>`
         : "";
       const equipo = crewButtonsHtmlForEvent(ev);
       const importe =
@@ -729,7 +957,9 @@
     editingId = null;
     pendingTipo = tipo;
     sheetTipo.textContent = tipo;
-    inputComunidad.value = "";
+    clearClienteTipo();
+    inputNombre.value = "";
+    hideSuggestions();
     clearCrewSelection();
     inputImporte.value = "";
     inputNotas.value = "";
@@ -742,7 +972,7 @@
     sheetOverlay.hidden = false;
     setStatus(`Registrando: ${tipo}…`, "busy");
     requestGeo();
-    setTimeout(() => inputComunidad.focus(), 100);
+    setTimeout(() => inputNombre.focus(), 100);
   }
 
   function openEditSheet(id) {
@@ -752,7 +982,9 @@
     editingId = id;
     pendingTipo = ev.tipo;
     sheetTipo.textContent = ev.tipo;
-    inputComunidad.value = ev.comunidad_casa || "";
+    setClienteTipo(ev.cliente_tipo || "");
+    inputNombre.value = ev.comunidad_casa || "";
+    hideSuggestions();
     setCrewSelectionFromEquipo(ev.equipo || "");
     inputImporte.value =
       ev.importe_eur != null && Number.isFinite(Number(ev.importe_eur))
@@ -788,10 +1020,11 @@
       inputLng.value = String(ev.lng);
     }
     sheetOverlay.hidden = false;
-    setTimeout(() => inputComunidad.focus(), 100);
+    setTimeout(() => inputNombre.focus(), 100);
   }
 
   function closeSheet() {
+    hideSuggestions();
     sheetOverlay.hidden = true;
     if (sheetMode === "new") {
       setStatus("Listo. Pulsa un botón para registrar.", null);
@@ -871,8 +1104,15 @@
       return;
     }
 
-    const comunidad = inputComunidad.value.trim();
+    const comunidad = inputNombre.value.trim();
+    const cliente_tipo = selectedClienteTipo || "";
     const notas = inputNotas.value.trim();
+
+    if (comunidad && cliente_tipo) {
+      upsertCliente(comunidad, cliente_tipo);
+    } else if (comunidad) {
+      upsertCliente(comunidad, "");
+    }
 
     if (sheetMode === "edit" && editingId) {
       const idx = events.findIndex((e) => e.id === editingId);
@@ -880,6 +1120,7 @@
       events[idx] = {
         ...events[idx],
         comunidad_casa: comunidad,
+        cliente_tipo,
         notas,
         equipo: extra.equipo,
         importe_eur: extra.importe_eur,
@@ -905,6 +1146,7 @@
       lng: geo.lng,
       accuracy_m: geo.accuracy_m,
       comunidad_casa: comunidad,
+      cliente_tipo,
       notas,
       sin_gps: geo.sin_gps,
       equipo: extra.equipo,
@@ -956,6 +1198,7 @@
       "lng",
       "precision_m",
       "comunidad_casa",
+      "cliente_tipo",
       "notas",
       "equipo",
       "importe_eur",
@@ -975,6 +1218,7 @@
           ev.lng != null ? ev.lng : "",
           ev.accuracy_m != null ? Math.round(ev.accuracy_m) : "",
           ev.comunidad_casa || "",
+          ev.cliente_tipo || "",
           ev.notas || "",
           ev.equipo || "",
           ev.importe_eur != null ? ev.importe_eur : "",
@@ -1068,6 +1312,69 @@
     toggleCrewBtn(btn);
   });
 
+  tipoToggles.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tipo-btn");
+    if (!btn || !tipoToggles.contains(btn)) return;
+    const tip = btn.dataset.tipo || "";
+    if (selectedClienteTipo === tip) clearClienteTipo();
+    else setClienteTipo(tip);
+  });
+
+  inputNombre.addEventListener("input", () => {
+    refreshSuggestionsFromInput();
+  });
+
+  inputNombre.addEventListener("focus", () => {
+    if (suggestBlurTimer) {
+      clearTimeout(suggestBlurTimer);
+      suggestBlurTimer = null;
+    }
+    refreshSuggestionsFromInput();
+  });
+
+  inputNombre.addEventListener("blur", () => {
+    suggestBlurTimer = setTimeout(() => hideSuggestions(), 180);
+  });
+
+  inputNombre.addEventListener("keydown", (e) => {
+    if (suggestList.hidden) return;
+    const matches = suggestList._matches || [];
+    if (!matches.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      suggestActiveIdx = Math.min(suggestActiveIdx + 1, matches.length - 1);
+      highlightSuggest();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      suggestActiveIdx = Math.max(suggestActiveIdx - 1, 0);
+      highlightSuggest();
+    } else if (e.key === "Enter" && suggestActiveIdx >= 0) {
+      e.preventDefault();
+      applySuggestion(matches[suggestActiveIdx]);
+    } else if (e.key === "Escape") {
+      hideSuggestions();
+    }
+  });
+
+  function highlightSuggest() {
+    suggestList.querySelectorAll(".suggest-item").forEach((el, i) => {
+      el.classList.toggle("active", i === suggestActiveIdx);
+    });
+  }
+
+  suggestList.addEventListener("mousedown", (e) => {
+    // keep focus; prevent blur-before-click
+    e.preventDefault();
+  });
+
+  suggestList.addEventListener("click", (e) => {
+    const item = e.target.closest(".suggest-item");
+    if (!item || !suggestList.contains(item)) return;
+    const matches = suggestList._matches || [];
+    const idx = Number(item.dataset.idx);
+    if (Number.isFinite(idx) && matches[idx]) applySuggestion(matches[idx]);
+  });
+
   btnSaveSheet.addEventListener("click", saveFromSheet);
   btnCancelSheet.addEventListener("click", closeSheet);
 
@@ -1122,7 +1429,11 @@
         deleteTargetId = null;
         confirmOverlay.hidden = true;
       } else if (!sheetOverlay.hidden) {
-        closeSheet();
+        if (!suggestList.hidden) {
+          hideSuggestions();
+        } else {
+          closeSheet();
+        }
       }
     }
   });
@@ -1137,6 +1448,7 @@
   }
 
   // Init
+  clientes = loadClientes();
   maybeAutoSeed();
   renderList();
   if (events.length === 0) {

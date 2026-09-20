@@ -75,23 +75,24 @@ Una vez instalada, funciona a pantalla completa y puede usarse **sin conexión**
    - **Traslado personal**
    - **Tarea hecha**
 2. Se pide la ubicación de alta precisión. Mientras tanto (o después) puedes rellenar:
-   - **Comunidad / casa** (opcional)
-   - **Equipo** (opcional, ej. «Vicky + Haydee»)
+   - **Tipo de lugar** (recomendado): Comunidad / Piso / Casa / Oficina
+   - **Nombre** (opcional) con autocompletado desde clientes en `localStorage` (`paradas-gps-clientes`)
+   - **Equipo** (opcional, chips o texto libre en eventos de demo)
    - **Importe (€)** (opcional)
    - **Notas** (opcional)
    - **Dejar abierto** (marca si el ítem queda incompleto; estado `abierto`)
 3. Si el GPS falla o deniegas el permiso:
    - Marca **Guardar sin GPS**, o
    - Introduce **latitud** y **longitud** manualmente.
-4. Pulsa **Guardar**.
+4. Pulsa **Guardar**. Un nombre+tipo nuevo se guarda también en la base de clientes.
 5. El historial muestra los eventos (más recientes arriba). Filtra **Hoy** o **Todos**.
-6. En cada tarjeta: **Editar** (comunidad/notas/coords) o **Borrar**.
+6. En cada tarjeta: **Editar** (tipo/nombre/notas/coords) o **Borrar**.
 
 ## Exportar datos
 
 - Botón **CSV**: descarga un archivo UTF‑8 **con BOM** (abre bien en Excel) con columnas:
 
-  `fecha,hora,tipo,lat,lng,precision_m,comunidad_casa,notas,equipo,importe_eur,estado,maps_url`
+  `fecha,hora,tipo,lat,lng,precision_m,comunidad_casa,cliente_tipo,notas,equipo,importe_eur,estado,maps_url`
 
   `maps_url` es un enlace a Google Maps con las coordenadas.
 
@@ -110,7 +111,7 @@ La app incluye un **día de referencia real**: lunes **14 de septiembre de 2026*
 
 Algunas coordenadas son Nominatim/OSM reales (Amarella 4, CEIP Aguiño, Corrubedo, O Campiño, Xarás, calles Rosalía / Monumento / Miguel Rodríguez Bautista, Coroso). Otras son **aproximaciones** en la misma zona (Caramicheiros, Comunidad 84, Coral, Eco Cabañas / Crocha de Poniente, Av. Coruña 70 Faro, salida 12:00) con offsets distintos para que `maps_url` siga funcionando. Detalle en las notas de cada evento.
 
-Campos extra del modelo (opcionales): `equipo`, `importe_eur`, `estado` (`cerrado` | `abierto`).
+Campos extra del modelo (opcionales): `cliente_tipo` (`comunidad` | `piso` | `casa` | `oficina`), `equipo`, `importe_eur`, `estado` (`cerrado` | `abierto`). El nombre del lugar sigue en `comunidad_casa` (compatibilidad CSV).
 
 ## Privacidad
 

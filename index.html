@@ -67,15 +67,28 @@
     </section>
   </main>
 
-  <!-- Sheet: editar comunidad / notas antes o después de guardar -->
+  <!-- Sheet: tipo/nombre cliente, equipo, notas… -->
   <div class="sheet-overlay" id="sheetOverlay" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
       <div class="sheet-handle" aria-hidden="true"></div>
       <h2 id="sheetTitle">Detalles del evento</h2>
       <p class="sheet-tipo" id="sheetTipo"></p>
 
-      <label for="inputComunidad">Comunidad / casa <span class="optional">(opcional)</span></label>
-      <input type="text" id="inputComunidad" placeholder="Ej. Urbanización Las Flores · portal 3" autocomplete="off" />
+      <div class="cliente-field">
+        <span class="cliente-label" id="clienteTipoLabel">Tipo de lugar <span class="optional">(recomendado)</span></span>
+        <div class="tipo-toggles" role="group" aria-labelledby="clienteTipoLabel" id="tipoToggles">
+          <button type="button" class="tipo-btn" data-tipo="comunidad" aria-pressed="false">Comunidad</button>
+          <button type="button" class="tipo-btn" data-tipo="piso" aria-pressed="false">Piso</button>
+          <button type="button" class="tipo-btn" data-tipo="casa" aria-pressed="false">Casa</button>
+          <button type="button" class="tipo-btn" data-tipo="oficina" aria-pressed="false">Oficina</button>
+        </div>
+      </div>
+
+      <label for="inputNombre">Nombre <span class="optional">(opcional)</span></label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="inputNombre" placeholder="Ej. Coroso 1, Amarella 4…" autocomplete="off" aria-autocomplete="list" aria-controls="suggestList" aria-expanded="false" />
+        <ul class="suggest-list" id="suggestList" role="listbox" hidden></ul>
+      </div>
 
       <div class="equipo-field">
         <span class="equipo-label" id="equipoLabel">Equipo <span class="optional">(opcional)</span></span>
