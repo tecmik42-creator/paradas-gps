@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b3d2e" />
+  <meta name="description" content="Gestión de clientes para autocompletado de Paradas GPS." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Paradas GPS" />
+  <title>Clientes · Paradas GPS</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="page-clientes">
+  <header class="app-header">
+    <div class="header-nav">
+      <a href="index.html" class="nav-link" aria-label="Volver a Paradas">← Paradas</a>
+      <span class="nav-spacer" aria-hidden="true"></span>
+    </div>
+    <h1>Clientes</h1>
+    <p class="subtitle">Base local para el autocompletado</p>
+  </header>
+
+  <main>
+    <section class="clientes-search" aria-label="Buscar clientes">
+      <label class="sr-only" for="searchClientes">Buscar por nombre</label>
+      <input
+        type="search"
+        id="searchClientes"
+        class="search-input"
+        placeholder="Buscar por nombre…"
+        autocomplete="off"
+        enterkeyhint="search"
+      />
+    </section>
+
+    <section class="clientes-filters" aria-label="Filtrar por tipo">
+      <div class="chip-row" role="group" id="filterChips">
+        <button type="button" class="chip-btn active" data-filter="todos" aria-pressed="true">
+          Todos <span class="chip-count" data-count-for="todos">0</span>
+        </button>
+        <button type="button" class="chip-btn" data-filter="comunidad" aria-pressed="false">
+          Comunidad <span class="chip-count" data-count-for="comunidad">0</span>
+        </button>
+        <button type="button" class="chip-btn" data-filter="piso" aria-pressed="false">
+          Piso <span class="chip-count" data-count-for="piso">0</span>
+        </button>
+        <button type="button" class="chip-btn" data-filter="casa" aria-pressed="false">
+          Casa <span class="chip-count" data-count-for="casa">0</span>
+        </button>
+        <button type="button" class="chip-btn" data-filter="oficina" aria-pressed="false">
+          Oficina <span class="chip-count" data-count-for="oficina">0</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="clientes-add" aria-labelledby="addTitle">
+      <h2 id="addTitle" class="section-title">Añadir cliente</h2>
+      <div class="tipo-toggles" role="group" aria-label="Tipo de lugar" id="addTipoToggles">
+        <button type="button" class="tipo-btn" data-tipo="comunidad" aria-pressed="false">Comunidad</button>
+        <button type="button" class="tipo-btn" data-tipo="piso" aria-pressed="false">Piso</button>
+        <button type="button" class="tipo-btn" data-tipo="casa" aria-pressed="false">Casa</button>
+        <button type="button" class="tipo-btn" data-tipo="oficina" aria-pressed="false">Oficina</button>
+      </div>
+      <label for="addNombre" class="field-label">Nombre</label>
+      <div class="add-row">
+        <input type="text" id="addNombre" placeholder="Ej. Coroso 1…" autocomplete="off" />
+        <button type="button" class="btn-save" id="btnAddSave">Guardar</button>
+      </div>
+      <p class="hint-inline" id="addHint" hidden></p>
+    </section>
+
+    <section class="status-bar" id="statusBar" aria-live="polite">
+      <span id="statusText">Listo.</span>
+    </section>
+
+    <section class="clientes-list-section" aria-label="Lista de clientes">
+      <h2 class="section-title">
+        Lista <span class="count" id="listCount">(0)</span>
+      </h2>
+      <div id="clientesList" class="clientes-list"></div>
+      <p class="empty-msg" id="emptyMsg" hidden>No hay clientes. Añade el primero arriba.</p>
+    </section>
+
+    <section class="clientes-io" aria-label="Importar y exportar">
+      <button type="button" class="btn-secondary" id="btnExportClientes">Exportar JSON</button>
+      <button type="button" class="btn-secondary" id="btnImportClientes">Importar JSON</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden />
+    </section>
+  </main>
+
+  <!-- Sheet: editar cliente -->
+  <div class="sheet-overlay" id="editOverlay" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="editTitle">Editar cliente</h2>
+
+      <span class="cliente-label" id="editTipoLabel">Tipo de lugar</span>
+      <div class="tipo-toggles" role="group" aria-labelledby="editTipoLabel" id="editTipoToggles">
+        <button type="button" class="tipo-btn" data-tipo="comunidad" aria-pressed="false">Comunidad</button>
+        <button type="button" class="tipo-btn" data-tipo="piso" aria-pressed="false">Piso</button>
+        <button type="button" class="tipo-btn" data-tipo="casa" aria-pressed="false">Casa</button>
+        <button type="button" class="tipo-btn" data-tipo="oficina" aria-pressed="false">Oficina</button>
+      </div>
+
+      <label for="editNombre">Nombre</label>
+      <input type="text" id="editNombre" placeholder="Nombre del cliente" autocomplete="off" />
+
+      <div class="sheet-actions">
+        <button type="button" class="btn-cancel" id="btnCancelEdit">Cancelar</button>
+        <button type="button" class="btn-save" id="btnSaveEdit">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm delete -->
+  <div class="sheet-overlay" id="confirmOverlay" hidden>
+    <div class="sheet sheet-small" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle">¿Borrar cliente?</h2>
+      <p id="confirmText">Esta acción no se puede deshacer.</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn-cancel" id="btnCancelDelete">Cancelar</button>
+        <button type="button" class="btn-danger" id="btnConfirmDelete">Borrar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Misma clave localStorage que el registro · Europe/Madrid</p>
+  </footer>
+
+  <script src="clientes.js"></script>
+</body>
+</html>

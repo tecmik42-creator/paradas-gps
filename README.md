@@ -10,9 +10,11 @@ Pensada para conductores en España (ropa, alfombras, traslado de personal de li
 
 | Archivo | Descripción |
 |---------|-------------|
-| `index.html` | Página principal |
+| `index.html` | Página principal (registro) |
+| `clientes.html` | Gestión de la base de clientes |
 | `styles.css` | Estilos alto contraste |
-| `app.js` | Lógica de la app |
+| `app.js` | Lógica del registro |
+| `clientes.js` | Lógica de la página Clientes |
 | `manifest.json` | Manifiesto PWA |
 | `sw.js` | Service worker (modo offline) |
 | `icons/` | Iconos de instalación |
@@ -87,6 +89,16 @@ Una vez instalada, funciona a pantalla completa y puede usarse **sin conexión**
 4. Pulsa **Guardar**. Un nombre+tipo nuevo se guarda también en la base de clientes.
 5. El historial muestra los eventos (más recientes arriba). Filtra **Hoy** o **Todos**.
 6. En cada tarjeta: **Editar** (tipo/nombre/notas/coords) o **Borrar**.
+
+
+## Clientes
+
+Página **Clientes** (`clientes.html`, enlace en la cabecera del registro) para gestionar la base local `paradas-gps-clientes` (`{id, tipo, nombre}`) que alimenta el autocompletado al registrar eventos.
+
+- Buscar por nombre (sin distinguir acentos) y filtrar por tipo (Comunidad / Piso / Casa / Oficina), con contadores.
+- Añadir, editar y borrar clientes; al guardar, el mismo nombre normalizado + tipo actualiza en lugar de duplicar.
+- Exportar / importar la lista en JSON.
+- Los cambios se sincronizan al instante con el registro (misma clave `localStorage`).
 
 ## Exportar datos
 
