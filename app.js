@@ -499,9 +499,7 @@
       const comunidad = ev.comunidad_casa
         ? `<div class="event-meta"><strong>Lugar:</strong> ${escapeHtml(ev.comunidad_casa)}</div>`
         : "";
-      const equipo = ev.equipo
-        ? `<div class="event-meta"><strong>Equipo:</strong> ${escapeHtml(ev.equipo)}</div>`
-        : "";
+      const equipo = crewButtonsHtmlForEvent(ev);
       const importe =
         ev.importe_eur != null && Number.isFinite(Number(ev.importe_eur))
           ? `<div class="event-meta"><strong>Importe:</strong> ${escapeHtml(
@@ -621,6 +619,43 @@
 
 
   // ——— Equipo (crew toggles) ———
+  const CREW_ALIASES = {
+    haydee: "Haydee",
+    adriana: "Adriana",
+    virginia: "Virginia",
+    vicky: "Virginia",
+    joy: "Joy",
+    mikael: "Mikael",
+    tu: "Mikael",
+    yo: "Mikael",
+  };
+
+  function foldToken(raw) {
+    return String(raw)
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "");
+  }
+
+  /** Map free-text equipo tokens → canonical CREW names (aliases + ignore "N personas"). */
+  function parseEquipoNames(equipoStr) {
+    if (!equipoStr) return [];
+    const parts = String(equipoStr)
+      .split(/\s*[+,]\s*/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const selected = new Set();
+    for (const part of parts) {
+      const folded = foldToken(part);
+      if (!folded) continue;
+      if (/^\d+\s*personas?$/.test(folded)) continue;
+      const canonical = CREW_ALIASES[folded];
+      if (canonical) selected.add(canonical);
+    }
+    return CREW.filter((name) => selected.has(name));
+  }
+
   function getCrewButtons() {
     return Array.from(crewToggles.querySelectorAll(".crew-btn"));
   }
@@ -634,12 +669,7 @@
 
   function setCrewSelectionFromEquipo(equipoStr) {
     clearCrewSelection();
-    if (!equipoStr) return;
-    const parts = String(equipoStr)
-      .split(/\s*\+\s*/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const selected = new Set(parts);
+    const selected = new Set(parseEquipoNames(equipoStr));
     getCrewButtons().forEach((btn) => {
       const name = btn.getAttribute("data-name");
       if (selected.has(name)) {
@@ -661,6 +691,36 @@
     const on = !(btn.getAttribute("aria-pressed") === "true");
     btn.setAttribute("aria-pressed", on ? "true" : "false");
     btn.classList.toggle("selected", on);
+  }
+
+  function crewButtonsHtmlForEvent(ev) {
+    const selected = new Set(parseEquipoNames(ev.equipo || ""));
+    const buttons = CREW.map((name) => {
+      const on = selected.has(name);
+      return (
+        `<button type="button" class="crew-btn${on ? " selected" : ""}"` +
+        ` data-name="${escapeHtml(name)}" data-event-id="${escapeHtml(ev.id)}"` +
+        ` aria-pressed="${on ? "true" : "false"}">${escapeHtml(name)}</button>`
+      );
+    }).join("");
+    return (
+      `<div class="event-equipo">` +
+      `<div class="event-meta"><strong>Equipo</strong></div>` +
+      `<div class="crew-toggles event-crew" role="group" aria-label="Equipo">${buttons}</div>` +
+      `</div>`
+    );
+  }
+
+  function toggleEventCrew(eventId, name) {
+    if (!CREW.includes(name)) return;
+    const ev = events.find((e) => e.id === eventId);
+    if (!ev) return;
+    const current = new Set(parseEquipoNames(ev.equipo || ""));
+    if (current.has(name)) current.delete(name);
+    else current.add(name);
+    ev.equipo = CREW.filter((n) => current.has(n)).join(" + ");
+    saveEvents();
+    renderList();
   }
 
   // ——— Sheet ———
@@ -1030,6 +1090,13 @@
   eventList.addEventListener("click", (e) => {
     const t = e.target;
     if (!(t instanceof HTMLElement)) return;
+    const crewBtn = t.closest(".crew-btn");
+    if (crewBtn && eventList.contains(crewBtn)) {
+      const eventId = crewBtn.getAttribute("data-event-id");
+      const name = crewBtn.getAttribute("data-name");
+      if (eventId && name) toggleEventCrew(eventId, name);
+      return;
+    }
     if (t.classList.contains("btn-edit")) {
       openEditSheet(t.dataset.id);
     } else if (t.classList.contains("btn-del")) {
